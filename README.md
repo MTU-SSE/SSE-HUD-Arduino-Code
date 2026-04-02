@@ -7,5 +7,12 @@ This is the code that runs on the HUD arduino during normal operation. It will c
 
 It also has working code for calculating wheelspeed directly from a hall effect sensor input, and infinished code for reading the lap button
 
-## flash_bluetooth_settings
-This is what it sounds like. This will flash a connected HC-05 bluetooth module with our desired settings. To use this script, upload it to the arduino, then power the arduino down. Hold the button on the HC-05 module while restoring power to the arduino. Wait ~10 seconds, and power the arudino down again. The bluetooth module should now be flashed with the correct settings. 
+## How to flash a bluetooth module
+
+ 1. Flash the arudino with the code in the flash_bluetooth_settings folder.
+ 2. Power down the arduino.
+ 3. Hold the button on the HC-05 bluetooth module while restoring power to the arduino.
+ 4. Keep holding the button on the HC-05 bluetooth module for 10 seconds
+ 5. Power the arudino down again.
+
+ The bluetooth module should now be flashed with the correct settings. 
