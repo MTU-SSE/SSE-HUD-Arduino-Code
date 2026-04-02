@@ -1,7 +1,7 @@
 # SSE-HUD-Arduino-Code
 Different scripts that are run on the HUD Arduino.
 
-## CAN_MVP
+## prototype_CAN_HUD_board
 This is the code that runs on the HUD arduino during normal operation. It will collect CAN data and output it to the USB port or the bluetooth module.
 
 It also has working code for calculating wheelspeed directly from a hall effect sensor input, and infinished code for reading the lap button
