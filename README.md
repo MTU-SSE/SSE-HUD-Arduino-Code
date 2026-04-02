@@ -1,5 +1,6 @@
 # SSE-HUD-Arduino-Code
 Different scripts that are run on the HUD Arduino.
+Please email john (john@umbriac.com) if you have any questions, I would be happy to help!
 
 ## prototype_CAN_HUD_board
 This is the code that runs on the HUD arduino during normal operation. It will collect CAN data and output it to the USB port or the bluetooth module.
