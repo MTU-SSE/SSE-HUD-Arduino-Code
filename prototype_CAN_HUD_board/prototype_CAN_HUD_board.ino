@@ -87,12 +87,13 @@ void loop() {
 //flag for if the button was pressed (set by interrupt)
 //0 is false, 1 is true
 int lap_button_pressed = 0;
-//timestamp of when the last sucessful press happened for software debounce
-long last_press_time = 0;
 //how long the debounce should wait (in ms)
 //should be longer than the press->release time of the button
 //to catch falling edge debounce
 const int DEBOUNCE_WAIT = 2000;
+//timestamp of when the last sucessful press happened for software debounce
+//This it set below zero so that the button works within the two seconds after the arduino starts
+long last_press_time = -DEBOUNCE_WAIT;
 //count of how many laps we have done
 //(unlikely to be useful as it will reset when the arduino is power cycled
 int laps = 0;
@@ -104,12 +105,16 @@ void lap_interrupt() {
   lap_button_pressed = 1;
 }
 
-//TODO: COMMENT
+//main loop handling of the lap button
 void lap_button_update() {
+  //check if the interrupt has fired since the last pass
   if (lap_button_pressed == 1) {
+    //if it has, then reset the flag
     lap_button_pressed = 0;
-    //TODO: COMMENT
+    //and check if we are still on debounce cooldown
     if (millis() - last_press_time > DEBOUNCE_WAIT) {
+      //if we are not on debounce cooldown then start the debounce cooldown
+      //and send the "button pressed" serial message
       last_press_time = millis();
       good_serial.print("[1] ");
       good_serial.print(2, HEX);
