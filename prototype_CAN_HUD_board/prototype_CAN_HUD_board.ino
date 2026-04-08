@@ -11,11 +11,20 @@ MCP2515 mcp2515(32);
 //  "Serial2" is the bluetooth module (if it is connected)
 #define good_serial Serial2
 
+//lap button pin
+int lap_pin = 23;
+
 void setup() {
   Serial.begin(115200);
   //this higher baud rate can only be used with bluetooth modules flashed with
   //the flash_bluetooth_settings program
   Serial2.begin(115200);
+
+  //This sets an interrupt on the lap button pin
+  //This means that when the arduino detects a RISING edge on that pin
+  //it will pause what it's currently doing, run lap_interrupt()
+  //and then when that is done it will resume what it was previously doing
+  attachInterrupt(digitalPinToInterrupt(lap_pin), lap_interrupt, RISING);
   
   mcp2515.reset();
   int res = mcp2515.setBitrate(CAN_1000KBPS, MCP_8MHZ);
@@ -43,10 +52,11 @@ void loop() {
       }
       //list of allowed packets (data we actually want)
       //see this doc for more info: https://docs.google.com/spreadsheets/d/1KqUCvgxujewzqeYJbRDF5o1ScjHsWxG1/edit?usp=sharing&ouid=108212624486532605840&rtpof=true&sd=true
-      if (canMsg.can_id == 0x118 ||
-          canMsg.can_id == 0x640 ||
+      //note: I don't think we get the 0x118 packet because we do not have a PDM
+      if (canMsg.can_id == 0x640 ||
           canMsg.can_id == 0x64C ||
           canMsg.can_id == 0x641 ||
+          canMsg.can_id == 0x648 ||
           canMsg.can_id == 0x649) {
         good_serial.print("[");
         good_serial.print("1] "); 
@@ -65,19 +75,50 @@ void loop() {
     // Causes the arduino to send out test data to verify that its connection to the HUD display is stable. This should cause the "RPM" value to rapidly increase
     //test_data();
     
-    // This is half finished unused code for reading the lap button from the hand controls and sending an appropriate signal to the HUD display. The HUD display will currently ignore this message.
-    //lap_button_update();
+    // This is reads the lap button from the flag that the interrupt sets
+    // and sends an appropriate signal to the HUD display.
+    // Uses software debouncing
+    lap_button_update();
 
     // This code works. It will calculate wheel speed each time a magnet passes the sensor, and send that updated speed to the HUD display
     //wheel_speed_update();
 }
 
-
-//int lap_pin = D26;
+//flag for if the button was pressed (set by interrupt)
+//0 is false, 1 is true
+int lap_button_pressed = 0;
+//timestamp of when the last sucessful press happened for software debounce
+long last_press_time = 0;
+//how long the debounce should wait (in ms)
+//should be longer than the press->release time of the button
+//to catch falling edge debounce
+const int DEBOUNCE_WAIT = 2000;
+//count of how many laps we have done
+//(unlikely to be useful as it will reset when the arduino is power cycled
 int laps = 0;
 
-//IMPORTANT this function still needs changes to work
+//This function gets called as an interrupt when the lap button is pressed.
+//It is important that is does as little as possible
+//with most of the processing being handled in the main loop
+void lap_interrupt() {
+  lap_button_pressed = 1;
+}
+
+//TODO: COMMENT
 void lap_button_update() {
+  if (lap_button_pressed == 1) {
+    lap_button_pressed = 0;
+    //TODO: COMMENT
+    if (millis() - last_press_time > DEBOUNCE_WAIT) {
+      last_press_time = millis();
+      good_serial.print("[1] ");
+      good_serial.print(2, HEX);
+      good_serial.print(" ");
+      good_serial.print(1, HEX);
+      good_serial.print("\n");
+    }
+  }
+  
   //TODO:change to check the pin, likely need to do some form of debounce or interrupt here
   //and increment the lap counter
   if (false) {
@@ -97,8 +138,8 @@ const int NUMBER_OF_MAGNETS_ON_WHEEL = 2; //the number of EQUALLY SPACED magnets
                                           //more magnets will give increased accuracy
                                           //if not equally spaced, values will be inaccurate
 
-const int MAGNET_PRESENT_THRESHOLD = 480 //a measured value above which a magnet is for sure present
-const int MAGNET_LEFT_THRESHOLD = 500 //a measured value below which a magnet is for sure no longer present
+const int MAGNET_PRESENT_THRESHOLD = 480; //a measured value above which a magnet is for sure present
+const int MAGNET_LEFT_THRESHOLD = 500; //a measured value below which a magnet is for sure no longer present
 //note that using the negative side of the magnet will push the reading in the opposite direction
 //all magnets need to have the same alignment for this system to work properly
 
