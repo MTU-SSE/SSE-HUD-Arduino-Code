@@ -12,6 +12,7 @@ MCP2515 mcp2515(32);
 #define good_serial Serial2
 
 //lap button pin
+//IMPORTANT! needs to be interrupt capable
 int lap_pin = 23;
 
 void setup() {
@@ -20,11 +21,14 @@ void setup() {
   //the flash_bluetooth_settings program
   Serial2.begin(115200);
 
+  pinMode(lap_pin, INPUT_PULLUP);
+
   //This sets an interrupt on the lap button pin
   //This means that when the arduino detects a RISING edge on that pin
   //it will pause what it's currently doing, run lap_interrupt()
   //and then when that is done it will resume what it was previously doing
-  attachInterrupt(digitalPinToInterrupt(lap_pin), lap_interrupt, RISING);
+  //attachInterrupt(digitalPinToInterrupt(lap_pin), lap_interrupt, RISING);
+  //currently commented out so we can use non-interrupt version
   
   mcp2515.reset();
   int res = mcp2515.setBitrate(CAN_1000KBPS, MCP_8MHZ);
@@ -44,44 +48,44 @@ void setup() {
 
 void loop() {
   // Human Readable (Values printed in hex)
-    int res = mcp2515.readMessage(&canMsg);
-    if (res == MCP2515::ERROR_OK) {
-      //filter out packets from the O2 sensor
-      if (canMsg.can_id == 0x460) {
-        return;
-      }
-      //list of allowed packets (data we actually want)
-      //see this doc for more info: https://docs.google.com/spreadsheets/d/1KqUCvgxujewzqeYJbRDF5o1ScjHsWxG1/edit?usp=sharing&ouid=108212624486532605840&rtpof=true&sd=true
-      //note: I don't think we get the 0x118 packet because we do not have a PDM
-      if (canMsg.can_id == 0x640 ||
-          canMsg.can_id == 0x64C ||
-          canMsg.can_id == 0x641 ||
-          canMsg.can_id == 0x648 ||
-          canMsg.can_id == 0x649) {
-        good_serial.print("[");
-        good_serial.print("1] "); 
-        good_serial.print(canMsg.can_id, HEX); // print ID
-        // Serial.print(canMsg.can_dlc, HEX); // print DLC
-        // Serial.print(" ");
-        
-        for (int i = 0; i<canMsg.can_dlc; i++)  {  // print the data
-          good_serial.print(" ");
-          good_serial.print(canMsg.data[i],HEX);
-        }
-
-        good_serial.print("\n");      
-      }
+  int res = mcp2515.readMessage(&canMsg);
+  if (res == MCP2515::ERROR_OK) {
+    //filter out packets from the O2 sensor
+    if (canMsg.can_id == 0x460) {
+      return;
     }
-    // Causes the arduino to send out test data to verify that its connection to the HUD display is stable. This should cause the "RPM" value to rapidly increase
-    //test_data();
-    
-    // This is reads the lap button from the flag that the interrupt sets
-    // and sends an appropriate signal to the HUD display.
-    // Uses software debouncing
-    lap_button_update();
+    //list of allowed packets (data we actually want)
+    //see this doc for more info: https://docs.google.com/spreadsheets/d/1KqUCvgxujewzqeYJbRDF5o1ScjHsWxG1/edit?usp=sharing&ouid=108212624486532605840&rtpof=true&sd=true
+    //note: I don't think we get the 0x118 packet because we do not have a PDM
+    if (canMsg.can_id == 0x640 ||
+        canMsg.can_id == 0x64C ||
+        canMsg.can_id == 0x641 ||
+        canMsg.can_id == 0x648 ||
+        canMsg.can_id == 0x649) {
+      good_serial.print("[");
+      good_serial.print("1] "); 
+      good_serial.print(canMsg.can_id, HEX); // print ID
+      // Serial.print(canMsg.can_dlc, HEX); // print DLC
+      // Serial.print(" ");
+      
+      for (int i = 0; i<canMsg.can_dlc; i++)  {  // print the data
+        good_serial.print(" ");
+        good_serial.print(canMsg.data[i],HEX);
+      }
 
-    // This code works. It will calculate wheel speed each time a magnet passes the sensor, and send that updated speed to the HUD display
-    //wheel_speed_update();
+      good_serial.print("\n");      
+    }
+  }
+  // Causes the arduino to send out test data to verify that its connection to the HUD display is stable. This should cause the "RPM" value to rapidly increase
+  //test_data();
+  
+  // This is reads the lap button from the flag that the interrupt sets
+  // and sends an appropriate signal to the HUD display.
+  // Uses software debouncing
+  lap_button_update();
+
+  // This code works. It will calculate wheel speed each time a magnet passes the sensor, and send that updated speed to the HUD display
+  //wheel_speed_update();
 }
 
 //flag for if the button was pressed (set by interrupt)
@@ -108,7 +112,12 @@ void lap_interrupt() {
 //main loop handling of the lap button
 void lap_button_update() {
   //check if the interrupt has fired since the last pass
-  if (lap_button_pressed == 1) {
+  //if (lap_button_pressed == 1) {
+
+  //non-interrupt version: just check the pin directly
+  //use LOW if the press sets the pin to 0V
+  //use HIGH if the press sets the pin to 5v
+  if (digitalRead(lap_pin) == LOW) {
     //if it has, then reset the flag
     lap_button_pressed = 0;
     //and check if we are still on debounce cooldown
@@ -122,16 +131,6 @@ void lap_button_update() {
       good_serial.print(1, HEX);
       good_serial.print("\n");
     }
-  }
-  
-  //TODO:change to check the pin, likely need to do some form of debounce or interrupt here
-  //and increment the lap counter
-  if (false) {
-    good_serial.print("[1] ");
-    good_serial.print(2, HEX);
-    good_serial.print(" ");
-    good_serial.print(laps, HEX);
-    good_serial.print("\n");
   }
 }
 
@@ -189,42 +188,41 @@ float mag_passed_speed() {
   return result;
 }
 
-
 int number = 0;
 
 //sends test data to the HUD display
 //This should cause the "RPM" data value to rapidly increase
 void test_data() {
-   if (number % 50 == 0) {
+  if (number % 50 == 0) {
     number = 0;
-   }
-   good_serial.print("[");
-   good_serial.print("1");
-   good_serial.print("] ");
-   good_serial.print("640 ");
-   good_serial.print(number, HEX);
-   good_serial.print(" ");
-   number++;
-   good_serial.print(number, HEX);
-   good_serial.print(" ");
-   number++;
-   good_serial.print(number, HEX);
-   good_serial.print(" ");
-   number++;
-   good_serial.print(number, HEX);
-   good_serial.print(" ");
-   number++;
-   good_serial.print(number, HEX);
-   good_serial.print(" ");
-   number++;
-   good_serial.print(number, HEX);
-   good_serial.print(" ");
-   number++;
-   good_serial.print(number, HEX);
-   good_serial.print(" ");
-   number++;
-   good_serial.print(number, HEX);
-   number++;
+  }
+  good_serial.print("[");
+  good_serial.print("1");
+  good_serial.print("] ");
+  good_serial.print("640 ");
+  good_serial.print(number, HEX);
+  good_serial.print(" ");
+  number++;
+  good_serial.print(number, HEX);
+  good_serial.print(" ");
+  number++;
+  good_serial.print(number, HEX);
+  good_serial.print(" ");
+  number++;
+  good_serial.print(number, HEX);
+  good_serial.print(" ");
+  number++;
+  good_serial.print(number, HEX);
+  good_serial.print(" ");
+  number++;
+  good_serial.print(number, HEX);
+  good_serial.print(" ");
+  number++;
+  good_serial.print(number, HEX);
+  good_serial.print(" ");
+  number++;
+  good_serial.print(number, HEX);
+  number++;
 
-   good_serial.print("\n");
+  good_serial.print("\n");
 }
