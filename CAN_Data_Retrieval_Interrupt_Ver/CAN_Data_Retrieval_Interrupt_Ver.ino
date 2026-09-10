@@ -8,11 +8,13 @@
     Disadvantages: Inefficiency, Increased power consumption
 
   File Created: 2/15/26
-  File Revision Date: 3/26/26
+  File Revision Date: 9/9/26
 
   Updates: updated bitrate and clockrate to be compatable with custom Motor Controller (500Kbps, 8MHz respectively)
            rewired INT pin on MCP2515 to go to D2 on Mega 2560 because D49 does not support interrupts
            properly set up attaching interrupt to trigger
+           Change serial print of data from 'Serial' to 'Serial2'
+           Serial sends data via USB where Serial2 sends data via Bluetooth 
 */
 #include <SPI.h>
 #include <mcp2515.h>
@@ -25,10 +27,18 @@ volatile bool interrupt = false; // interrupt flag
 
 void irqHandler() { interrupt = true; } // interrupt handler
 
+// note define Serial2 as good_serial like in prototype board
+#define good_serial Serial2
+
 void setup() {
 
   Serial.begin(9600);
-  while (!Serial);
+
+  // higher baudrate can only be used with bluetooth modules flashed with the
+  // the flash_bluetooth_setting_program ino file
+  Serial2.begin(115200);
+
+  while (!Serial || !Serial2);
   delay(100); 
 
   // Error handling:
@@ -80,21 +90,21 @@ void processFrame(struct can_frame &frame){
   //Serial.print(" From ID: ");
   //Serial.println(controller_id, HEX);
 
-  Serial.print("[");
-  Serial.print("2"); // send 2 to HUD app to represent the UC MOCO
-  Serial.print("] ");
-  Serial.print(packet_id, HEX);
+  good_serial.print("[");
+  good_serial.print("2"); // send 2 to HUD app to represent the UC MOCO
+  good_serial.print("] ");
+  good_serial.print(packet_id, HEX);
 
   // print data from frame
   for(int i = 0; i < frame.can_dlc; i++){
           
-    Serial.print(" ");
-    Serial.print(frame.data[i], HEX);
+    good_serial.print(" ");
+    good_serial.print(frame.data[i], HEX);
      
   }
 
   // print new line
-  Serial.print("\n");
+  good_serial.print("\n");
     
 }
 
