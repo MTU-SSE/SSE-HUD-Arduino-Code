@@ -32,7 +32,7 @@ void irqHandler() { interrupt = true; } // interrupt handler
 
 void setup() {
 
-  Serial.begin(9600);
+  Serial.begin(115200);
 
   // higher baudrate can only be used with bluetooth modules flashed with the
   // the flash_bluetooth_setting_program ino file
