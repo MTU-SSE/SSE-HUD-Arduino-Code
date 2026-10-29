@@ -136,6 +136,9 @@ void loop(){
     mcp2515.clearInterrupts();
   }
 
+  // function for testing bluetooth, and HUD connectivity; also correctness of controlled HUD values
+  //test_data();
+
   // If all else fails this is polling request logic
   //if(mcp2515.readMessage(&CAN_MSG) == MCP2515::ERROR_OK) {
   //  Serial.print("ID: ");
@@ -149,6 +152,87 @@ void loop(){
   //  }
   //  Serial.println();
   //}
+
+}
+
+uint8_t count = 0;
+uint8_t ars[8] = {0x61, 0xA8, 0x00, 0x7D, 0x00, 0x00, 0x03, 0xE8};
+uint32_t RPM_tracker = 1000;
+
+// test bench function for testing bluetooth connectivity and easy app data path tests
+void test_data(){
+
+  // send status package 1
+  if(count % 100 == 0) {
+
+    // change rpm
+    switch(RPM_tracker){
+
+      case 1000: // set RPM to 2000
+
+        ars[7] = 0xD0; ars[6] = 0x07;
+        RPM_tracker = 2000;
+      break;
+
+      case 2000:
+
+        ars[7] = 0xB8; ars[6] = 0x0B;
+        RPM_tracker = 3000;
+      break;
+
+      case 3000:
+
+        ars[7] = 0xA0; ars[6] = 0x0F;
+        RPM_tracker = 4000;
+      break;
+
+      case 4000:
+
+        ars[7] = 0x88; ars[6] = 0x13;
+        RPM_tracker = 5000;
+      break;
+
+      case 5000:
+
+        ars[7] = 0x70; ars[6] = 0x17;
+        RPM_tracker = 6000;
+      break;
+
+      case 6000:
+
+        ars[7] = 0xA0; ars[6] = 0x0F;
+        RPM_tracker = 7000;
+      break;
+
+      case 7000:
+
+        ars[7] = 0x58; ars[6] = 0x1B;
+        RPM_tracker = 1000;
+      break;
+    }
+
+    count = 0; // reset count
+  }
+
+  // send controller id
+    good_serial.print("[");
+    good_serial.print("2"); // send 2 to HUD app to represent the UC MOCO
+    good_serial.print("] ");
+
+    // send status packet 1: ID = 9
+    good_serial.print(9, HEX);
+
+    // send data (duty cycle = 25%, current = 12.5A, rpm = 1000)
+    for(uint8_t i = 0; i < 8; i++){
+
+      good_serial.print(" "); // obligatory spacing
+      good_serial.print(ars[i], HEX); // send actual byte
+    }
+
+  // print new line
+  good_serial.print("\n");
+
+  count++; // increment controller 
 
 }
 
