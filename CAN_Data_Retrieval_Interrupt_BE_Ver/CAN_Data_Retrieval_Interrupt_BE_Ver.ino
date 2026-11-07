@@ -163,7 +163,7 @@ uint32_t RPM_tracker = 1000;
 void test_data(){
 
   // send status package 1
-  if(count % 100 == 0) {
+  if(count % 50 == 0) {
 
     // change rpm
     switch(RPM_tracker){
@@ -200,17 +200,16 @@ void test_data(){
 
       case 6000:
 
-        ars[7] = 0xA0; ars[6] = 0x0F;
+        ars[7] = 0x58; ars[6] = 0x1B;
         RPM_tracker = 7000;
       break;
 
       case 7000:
 
-        ars[7] = 0x58; ars[6] = 0x1B;
+        ars[7] = 0xE8; ars[6] = 0x03;
         RPM_tracker = 1000;
       break;
     }
-
     count = 0; // reset count
   }
 
